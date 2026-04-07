@@ -60,6 +60,7 @@
 
 ### 大模型接入
 平台已支持真实模型接入，不再只是前端摆设：
+- 智谱 / GLM：通过 `LLM_*` 或 `ZHIPU_API_KEY` 配置，可在前端直接显示为 `GLM-5.1`、`GLM-5.1-Air` 等选项
 - OpenAI / GPT：通过 `LLM_*` 或 `OPENAI_API_KEY` 配置，可在前端直接显示为 `GPT-4.1`、`GPT-4.1 mini` 等选项
 - 千问：通过 `DASHSCOPE_*` 环境变量配置
 - 豆包：通过 `ARK_*` 或 `DOUBAO_*` 环境变量配置
@@ -105,6 +106,16 @@
 启动后可先打开：`http://127.0.0.1:8000/api/health`
 如果能看到 `{"status":"ok","version":"0.7.0"}`，说明后端正常。
 
+### 1.1 智谱 GLM-5.1 推荐配置
+如果你优先使用智谱官方兼容接口，建议直接设置：
+```powershell
+$env:LLM_BASE_URL = "https://open.bigmodel.cn/api/coding/paas/v4"
+$env:LLM_API_KEY = "你的智谱 API Key"
+ $env:LLM_MODEL_FAST = "GLM-5.1-Air"
+ $env:LLM_MODEL_SMART = "GLM-5.1"
+```
+说明：后端已兼容“只填写到 `/v4`”的 Base URL 写法，会自动补全到 `chat/completions`。
+
 ### 2. 前端
 如果你的系统里 `npm` 命令不可直接识别，先把项目自带 Node 放进当前会话路径：
 ```powershell
@@ -125,7 +136,7 @@ npm.cmd run dev
 详见 `env.example` 与 `docs/admin/admin-maintenance-guide.md`。重点变量包括：
 - `NEXT_PUBLIC_API_BASE`
 - `LLM_BASE_URL`
-- `LLM_API_KEY` 或 `OPENAI_API_KEY`
+- `LLM_API_KEY`、`OPENAI_API_KEY` 或 `ZHIPU_API_KEY`
 - `LLM_MODEL_FAST`
 - `LLM_MODEL_SMART`
 - `DASHSCOPE_API_KEY`
@@ -154,4 +165,5 @@ npm.cmd run dev
 - 部分文件解析：优先支持 txt、md、docx、pptx、zip 索引；pdf、doc、ppt、rar 可能仅保存供教师查看
 - 教师通知路由：当前按教师账号列表推送，后续可细化到课程归属教师
 - 图像理解效果：取决于所选模型是否支持视觉输入
+
 

@@ -44,6 +44,8 @@ MODEL_DESCRIPTIONS = {
     "default": "平台默认文本模型，适合高质量课程问答与综合解释。",
     "gpt-smart": "GPT 高质量模型，适合课程概念解释、综合问答和结构化生成。",
     "gpt-fast": "GPT 快速模型，适合课堂即时问答、追问和轻量总结。",
+    "glm-smart": "GLM 高质量模型，适合课程概念解释、推理问答和结构化生成。",
+    "glm-fast": "GLM 快速模型，适合课堂即时问答、连续追问和轻量总结。",
     "qwen-text": "千问文本模型，适合快速问答、文档总结与中文解释。",
     "qwen-vision": "千问视觉模型，适合图文理解、截图分析与多模态提问。",
     "doubao-text": "豆包文本模型，适合课堂概念讲解、内容生成与总结。",
@@ -63,10 +65,10 @@ def _infer_default_provider() -> str:
     model_name = (DEFAULT_MODEL_SMART or DEFAULT_MODEL_FAST or "").lower()
     if "openai.com" in base_url or model_name.startswith("gpt") or model_name.startswith("o"):
         return "openai"
+    if "bigmodel.cn" in base_url or "zhipu" in base_url or "glm" in model_name:
+        return "zhipu"
     if "deepseek" in base_url or "deepseek" in model_name:
         return "deepseek"
-    if "zhipu" in base_url or "glm" in model_name:
-        return "zhipu"
     return "default"
 
 
@@ -117,6 +119,30 @@ def _build_default_model_entries() -> Dict[str, Dict[str, Any]]:
                 "supports_vision": False,
                 "is_default": False,
                 "description": MODEL_DESCRIPTIONS["gpt-fast"],
+            }
+        return items
+
+    if provider == "zhipu":
+        items["glm-smart"] = {
+            "label": _format_model_label(smart_model),
+            "provider": "zhipu",
+            "model_name": smart_model,
+            "base_url": DEFAULT_BASE_URL,
+            "api_key": DEFAULT_API_KEY,
+            "supports_vision": False,
+            "is_default": True,
+            "description": MODEL_DESCRIPTIONS["glm-smart"],
+        }
+        if fast_model and fast_model != smart_model:
+            items["glm-fast"] = {
+                "label": _format_model_label(fast_model),
+                "provider": "zhipu",
+                "model_name": fast_model,
+                "base_url": DEFAULT_BASE_URL,
+                "api_key": DEFAULT_API_KEY,
+                "supports_vision": False,
+                "is_default": False,
+                "description": MODEL_DESCRIPTIONS["glm-fast"],
             }
         return items
 
@@ -221,6 +247,19 @@ def _get_http_client() -> httpx.Client:
     return httpx.Client(timeout=LLM_TIMEOUT, trust_env=True)
 
 
+def _normalize_chat_endpoint(base_url: str) -> str:
+    normalized = (base_url or "").strip().rstrip("/")
+    if not normalized:
+        return normalized
+    if normalized.endswith("/chat/completions"):
+        return normalized
+    if normalized.endswith("/v1") or normalized.endswith("/v4"):
+        return normalized + "/chat/completions"
+    if "/api/coding/paas/v4" in normalized and not normalized.endswith("/chat/completions"):
+        return normalized + "/chat/completions"
+    return normalized
+
+
 def _call_chat_model(messages: List[Dict[str, Any]], *, model_key: str = "default", max_tokens: int = 2048, temperature: float = 0.4) -> Dict[str, Any]:
     catalog = _model_catalog()
     requested_key = model_key or "default"
@@ -249,7 +288,7 @@ def _call_chat_model(messages: List[Dict[str, Any]], *, model_key: str = "defaul
     try:
         with _get_http_client() as client:
             response = client.post(
-                config["base_url"],
+                _normalize_chat_endpoint(config["base_url"]),
                 headers={
                     "Authorization": f"Bearer {config['api_key']}",
                     "Content-Type": "application/json",
