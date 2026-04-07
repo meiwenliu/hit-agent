@@ -30,11 +30,19 @@
 - 提问分发机制：支持“仅 AI”“仅教师”“AI + 教师”三种提问模式
 - 多模态提问：支持文本、图片、文档、压缩包附件上传
 - 学习问答记录：查看历史提问、AI 回答、教师回答与附件信息
+- 课堂共享资料：教师可上传并共享 PPT、PDF、图片、视频等资料，学生端同步查看
+- 资料请求提醒：学生可请求教师上传讲义资料，教师端收到站内提醒
+- 课程讨论空间：按“课程 + 授课班级”自动创建群聊式学习协作空间
+- 群聊式 AI 助教：学生在讨论空间中 @AI 助教后，系统结合最近聊天上下文、课程资料和附件回答
+- 聊天记录检索：支持关键词搜索、成员发言筛选与消息上下文定位
+- 管理员账号体系：支持管理员查看、创建、编辑、删除用户
+- 课堂同步展示与实时批注：教师可发起共享展示，学生端同步查看页码与批注
 - 薄弱点分析：基于历史提问生成温和的学习诊断和复习建议
 - 作业任务中心：确认收到、上传提交、查看状态与 AI 初步反馈
 - 匿名课堂反馈：课程结束后自愿填写，也可选择跳过
 - 个性化主题设置：白天、夜间、护眼模式 + 主色、字体、皮肤切换
-- 个人中心：维护账号资料与角色信息
+- 个人中心：维护账号资料、头像与角色信息
+- 右上角设置浮层：支持头像菜单、语言切换、进入设置中心、修改密码与退出登录
 
 ## 统一账号与角色逻辑
 - 登录 / 注册入口统一放在页面右上角
@@ -42,12 +50,14 @@
 - 登录成功后按教师 / 学生角色自动进入对应视图
 - 首页不再展示分散的教师注册页、学生注册页和独立设置卡片
 - 学生必须使用本人账号登录，匿名发言仅隐藏展示层身份
+- 右上角头像菜单采用顶部固定浮层，避免被页面内容遮挡
 
 ## 技术架构
 ### 前端
 - Next.js 16 + React 19 + TypeScript
 - App Router 结构
 - 全局主题变量 + 右上角设置中心
+- 中英双语切换入口
 - 统一 API 客户端，使用 Bearer Token 访问后端
 - 柔和浅色选中态样式系统，兼容白天 / 夜间 / 护眼模式
 
@@ -84,7 +94,10 @@
 - `/teacher/course`
 - `/teacher/ai-config`
 - `/teacher/assignments`
+- `/teacher/discussions`
 - `/teacher/questions`
+- `/teacher/materials`
+- `/teacher/materials/live/[shareId]`
 - `/teacher/material-update`
 - `/teacher/feedback`
 
@@ -92,9 +105,15 @@
 - `/student`
 - `/student/qa`
 - `/student/questions`
+- `/student/discussions`
+- `/student/materials`
+- `/student/materials/live/[shareId]`
 - `/student/weakness`
 - `/student/assignments`
 - `/student/feedback`
+
+### 管理员页面
+- `/admin/users`
 
 ## 快速启动
 ### 1. 后端
@@ -131,6 +150,7 @@ npm.cmd run dev
 初始化数据库时会自动写入两个演示账号：
 - 教师：`teacher_demo` / `Teacher123!`
 - 学生：`student_demo` / `Student123!`
+- 管理员：`admin_demo` / `Admin123!`
 
 ## 环境变量说明
 详见 `env.example` 与 `docs/admin/admin-maintenance-guide.md`。重点变量包括：

@@ -1,13 +1,15 @@
 ﻿from __future__ import annotations
 
 import json
+import os
 from datetime import datetime
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
-from ..database import DBUser, DBUserProfile, get_db
-from ..models.schemas import Student, Teacher, UserProfile, UserProfileBase
+from ..database import DBUser, DBUserProfile, PROFILE_UPLOAD_DIR, get_db
+from ..models.schemas import AvatarUploadResponse, Student, Teacher, UserProfile, UserProfileBase
 from ..security import get_current_user, require_roles
 
 router = APIRouter(prefix="/api/profile", tags=["profile"])
@@ -75,6 +77,41 @@ def update_my_profile(body: UserProfileBase, current_user: dict = Depends(get_cu
 
     db.commit()
     return UserProfile(**body.model_dump(), updated_at=row.updated_at)
+
+
+@router.post("/avatar", response_model=AvatarUploadResponse)
+def upload_avatar(file: UploadFile = File(...), current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    ext = os.path.splitext(file.filename or "")[1].lower()
+    if ext not in {".jpg", ".jpeg", ".png", ".webp"}:
+        raise HTTPException(status_code=400, detail="头像仅支持 jpg、jpeg、png、webp 格式")
+    payload = file.file.read()
+    if len(payload) > 5 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="头像文件不能超过 5MB")
+
+    user_dir = os.path.join(PROFILE_UPLOAD_DIR, current_user["id"])
+    os.makedirs(user_dir, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S%f")
+    filename = f"avatar-{timestamp}{ext}"
+    file_path = os.path.join(user_dir, filename)
+    with open(file_path, "wb") as output:
+        output.write(payload)
+
+    row = db.query(DBUserProfile).filter(DBUserProfile.user_id == current_user["id"]).first()
+    if not row:
+        row = DBUserProfile(user_id=current_user["id"], created_at=datetime.now().isoformat())
+        db.add(row)
+    row.avatar_path = f"/api/profile/avatar/{current_user['id']}/{filename}"
+    row.updated_at = datetime.now().isoformat()
+    db.commit()
+    return AvatarUploadResponse(avatar_path=row.avatar_path, updated_at=row.updated_at)
+
+
+@router.get("/avatar/{user_id}/{filename}")
+def get_avatar(user_id: str, filename: str):
+    file_path = os.path.join(PROFILE_UPLOAD_DIR, user_id, filename)
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="头像不存在")
+    return FileResponse(file_path, filename=filename)
 
 
 @router.get("/students", response_model=list[Student])

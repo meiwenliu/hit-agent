@@ -3,6 +3,7 @@ export type AppearancePayload = {
   accent?: string;
   font?: string;
   skin?: string;
+  language?: string;
 };
 
 export const APPEARANCE_CACHE_KEY = "hit-agent-active-appearance";
@@ -14,6 +15,7 @@ export function applyAppearance(appearance: AppearancePayload) {
   root.dataset.themeAccent = appearance.accent || "blue";
   root.dataset.themeFont = appearance.font || "default";
   root.dataset.themeSkin = appearance.skin || "clean";
+  root.lang = appearance.language || "zh-CN";
 }
 
 export function persistAppearance(appearance: AppearancePayload) {

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { RichAnswer } from "@/components/rich-answer";
 import { useAuth } from "@/components/auth-provider";
 import { api, type QuestionRecord, type TeacherNotification } from "@/lib/api";
 
@@ -113,7 +114,7 @@ export default function TeacherQuestionsPage() {
             {activeQuestion.ai_answer_content ? (
               <div className="mt-5 rounded-[26px] bg-slate-900 px-5 py-5 text-sm leading-7 text-white">
                 <p className="text-xs font-semibold text-slate-300">AI 回答</p>
-                <p className="mt-2 whitespace-pre-wrap">{activeQuestion.ai_answer_content}</p>
+                <RichAnswer content={activeQuestion.ai_answer_content} className="mt-2" />
               </div>
             ) : null}
 

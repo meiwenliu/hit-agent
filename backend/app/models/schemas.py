@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
-RoleType = Literal["teacher", "student"]
+RoleType = Literal["admin", "teacher", "student"]
 AnswerTargetType = Literal["ai", "teacher", "both"]
 TeacherReplyStatus = Literal["not_requested", "pending", "replied", "closed"]
 QuestionStatus = Literal["submitted", "ai_answered", "teacher_pending", "teacher_replied", "closed"]
@@ -16,6 +16,7 @@ class AppearanceSettingBase(BaseModel):
     accent: str = Field(default="blue")
     font: str = Field(default="default")
     skin: str = Field(default="clean")
+    language: str = Field(default="zh-CN")
 
 
 class AppearanceSetting(AppearanceSettingBase):
@@ -120,6 +121,7 @@ class AgentConfig(AgentConfigUpdate):
 class CourseCreate(BaseModel):
     name: str
     audience: str = ""
+    class_name: str = ""
     student_level: str = ""
     chapter: str = ""
     objectives: str = ""
@@ -240,6 +242,238 @@ class TeacherNotification(BaseModel):
     title: str
     content: str
     is_read: bool
+    created_at: str
+
+
+class PasswordChangeRequest(BaseModel):
+    current_password: str
+    new_password: str
+    confirm_password: str
+
+
+class AvatarUploadResponse(BaseModel):
+    avatar_path: str
+    updated_at: str
+
+
+class MaterialItem(BaseModel):
+    id: int
+    filename: str
+    file_type: str
+    created_at: str
+    download_url: str
+    size: int = 0
+
+
+class MaterialUploadResponse(MaterialItem):
+    message: str = "上传成功"
+
+
+class ClassroomShareCreate(BaseModel):
+    course_id: str
+    material_ids: List[int] = Field(default_factory=list)
+    title: str = "课堂资料共享"
+    description: str = ""
+    share_scope: str = "classroom"
+    share_type: str = "material"
+
+
+class ClassroomShare(BaseModel):
+    id: str
+    course_id: str
+    teacher_id: str
+    title: str
+    description: str
+    share_scope: str
+    share_type: str
+    status: str
+    created_at: str
+    materials: List[MaterialItem] = Field(default_factory=list)
+
+
+class MaterialRequestCreate(BaseModel):
+    course_id: str
+    request_text: str = ""
+
+
+class MaterialRequestItem(BaseModel):
+    id: str
+    course_id: str
+    student_id: str
+    student_name: str
+    anonymous: bool = False
+    request_text: str
+    status: str
+    created_at: str
+
+
+class CourseClassItem(BaseModel):
+    id: str
+    course_id: str
+    class_name: str
+    discussion_space_id: str = ""
+
+
+class DiscussionSpaceSummary(BaseModel):
+    id: str
+    course_id: str
+    class_name: str
+    space_name: str
+    ai_assistant_enabled: bool = True
+    member_count: int = 0
+    created_at: str
+
+
+class DiscussionMemberItem(BaseModel):
+    user_id: str
+    display_name: str
+    role_in_space: str
+    avatar_path: str = ""
+    joined_at: str
+
+
+class DiscussionAttachment(BaseModel):
+    id: str
+    file_name: str
+    file_type: str
+    file_size: int
+    parse_status: str
+    created_at: str
+    download_url: str
+
+
+class DiscussionMessageCreate(BaseModel):
+    space_id: str
+    content: str = ""
+    is_anonymous: bool = False
+    mention_ai: bool = False
+    attachment_ids: List[str] = Field(default_factory=list)
+
+
+class DiscussionMessageItem(BaseModel):
+    id: str
+    space_id: str
+    sender_user_id: str
+    sender_type: str
+    sender_display_name: str
+    sender_avatar_path: str = ""
+    is_anonymous: bool = False
+    message_type: str = "text"
+    content: str = ""
+    reply_to_message_id: str = ""
+    created_at: str
+    has_attachments: bool = False
+    attachments: List[DiscussionAttachment] = Field(default_factory=list)
+    ai_sources: List[str] = Field(default_factory=list)
+    can_locate: bool = True
+
+
+class DiscussionSpaceDetail(DiscussionSpaceSummary):
+    course_name: str = ""
+    members: List[DiscussionMemberItem] = Field(default_factory=list)
+    recent_materials: List[MaterialItem] = Field(default_factory=list)
+
+
+class DiscussionSearchResult(BaseModel):
+    items: List[DiscussionMessageItem] = Field(default_factory=list)
+    page: int = 1
+    page_size: int = 20
+    total: int = 0
+
+
+class DiscussionContextResponse(BaseModel):
+    anchor_message_id: str
+    messages: List[DiscussionMessageItem] = Field(default_factory=list)
+
+
+class AdminUserItem(BaseModel):
+    id: str
+    role: RoleType
+    account: str
+    display_name: str
+    status: str
+    created_at: str
+    class_name: str = ""
+    college: str = ""
+    major: str = ""
+    email: str = ""
+
+
+class AdminUserCreate(BaseModel):
+    role: RoleType
+    account: str
+    password: str
+    display_name: str = ""
+    status: str = "active"
+    profile: UserProfileBase = Field(default_factory=UserProfileBase)
+
+
+class AdminUserUpdate(BaseModel):
+    display_name: str = ""
+    status: str = "active"
+    profile: UserProfileBase = Field(default_factory=UserProfileBase)
+
+
+class LiveShareRecord(BaseModel):
+    id: str
+    material_id: int
+    course_id: str
+    shared_by_teacher_id: str
+    share_target_type: str
+    share_target_id: str
+    is_active: bool
+    current_page: int = 1
+    started_at: str
+    ended_at: str = ""
+
+
+class LiveShareStartRequest(BaseModel):
+    material_id: int
+    share_target_type: str = "course_class"
+    share_target_id: str = ""
+
+
+class LiveSharePageUpdate(BaseModel):
+    current_page: int = 1
+
+
+class AnnotationStrokeCreate(BaseModel):
+    page_no: int = 1
+    tool_type: str = "pen"
+    color: str = "#ef4444"
+    line_width: int = 4
+    points_data: List[Dict[str, Any]] = Field(default_factory=list)
+    is_temporary: bool = False
+    expires_in_seconds: int = 8
+
+
+class AnnotationStroke(BaseModel):
+    id: str
+    material_id: int
+    share_record_id: str
+    page_no: int
+    tool_type: str
+    color: str
+    line_width: int
+    points_data: List[Dict[str, Any]] = Field(default_factory=list)
+    is_temporary: bool = False
+    created_by: str
+    created_at: str
+    expires_at: str = ""
+
+
+class LiveShareCloseRequest(BaseModel):
+    save_mode: str = "discard"
+    version_name: str = ""
+
+
+class SavedAnnotationVersionItem(BaseModel):
+    id: str
+    material_id: int
+    share_record_id: str
+    saved_by: str
+    version_name: str
+    save_mode: str
     created_at: str
 
 

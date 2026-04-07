@@ -32,6 +32,7 @@ export interface AppearanceSetting {
   accent: string;
   font: string;
   skin: string;
+  language: string;
   updated_at: string;
 }
 
@@ -61,7 +62,7 @@ export interface UserProfile {
 
 export interface CurrentUser {
   id: string;
-  role: "teacher" | "student";
+  role: "admin" | "teacher" | "student";
   account: string;
   display_name: string;
   status: string;
@@ -78,6 +79,7 @@ export interface Course {
   id: string;
   name: string;
   audience: string;
+  class_name: string;
   student_level: string;
   chapter: string;
   objectives: string;
@@ -316,17 +318,171 @@ export interface TeacherNotification {
   created_at: string;
 }
 
+export interface MaterialItem {
+  id: number;
+  filename: string;
+  file_type: string;
+  created_at: string;
+  download_url: string;
+  size: number;
+}
+
+export interface ClassroomShare {
+  id: string;
+  course_id: string;
+  teacher_id: string;
+  title: string;
+  description: string;
+  share_scope: string;
+  share_type: string;
+  status: string;
+  created_at: string;
+  materials: MaterialItem[];
+}
+
+export interface MaterialRequestItem {
+  id: string;
+  course_id: string;
+  student_id: string;
+  student_name: string;
+  anonymous: boolean;
+  request_text: string;
+  status: string;
+  created_at: string;
+}
+
+export interface DiscussionSpaceSummary {
+  id: string;
+  course_id: string;
+  class_name: string;
+  space_name: string;
+  ai_assistant_enabled: boolean;
+  member_count: number;
+  created_at: string;
+}
+
+export interface DiscussionMemberItem {
+  user_id: string;
+  display_name: string;
+  role_in_space: string;
+  avatar_path: string;
+  joined_at: string;
+}
+
+export interface DiscussionAttachment {
+  id: string;
+  file_name: string;
+  file_type: string;
+  file_size: number;
+  parse_status: string;
+  created_at: string;
+  download_url: string;
+}
+
+export interface DiscussionMessageItem {
+  id: string;
+  space_id: string;
+  sender_user_id: string;
+  sender_type: string;
+  sender_display_name: string;
+  sender_avatar_path: string;
+  is_anonymous: boolean;
+  message_type: string;
+  content: string;
+  reply_to_message_id: string;
+  created_at: string;
+  has_attachments: boolean;
+  attachments: DiscussionAttachment[];
+  ai_sources: string[];
+  can_locate: boolean;
+}
+
+export interface DiscussionSpaceDetail extends DiscussionSpaceSummary {
+  course_name: string;
+  members: DiscussionMemberItem[];
+  recent_materials: MaterialItem[];
+}
+
+export interface DiscussionSearchResult {
+  items: DiscussionMessageItem[];
+  page: number;
+  page_size: number;
+  total: number;
+}
+
+export interface DiscussionContextResponse {
+  anchor_message_id: string;
+  messages: DiscussionMessageItem[];
+}
+
+export interface AdminUserItem {
+  id: string;
+  role: "admin" | "teacher" | "student";
+  account: string;
+  display_name: string;
+  status: string;
+  created_at: string;
+  class_name: string;
+  college: string;
+  major: string;
+  email: string;
+}
+
+export interface LiveShareRecord {
+  id: string;
+  material_id: number;
+  course_id: string;
+  shared_by_teacher_id: string;
+  share_target_type: string;
+  share_target_id: string;
+  is_active: boolean;
+  current_page: number;
+  started_at: string;
+  ended_at: string;
+}
+
+export interface AnnotationStroke {
+  id: string;
+  material_id: number;
+  share_record_id: string;
+  page_no: number;
+  tool_type: string;
+  color: string;
+  line_width: number;
+  points_data: { x: number; y: number }[];
+  is_temporary: boolean;
+  created_by: string;
+  created_at: string;
+  expires_at: string;
+}
+
+export interface SavedAnnotationVersionItem {
+  id: string;
+  material_id: number;
+  share_record_id: string;
+  saved_by: string;
+  version_name: string;
+  save_mode: string;
+  created_at: string;
+}
+
 export const api = {
   register: (payload: { role: "teacher" | "student"; account: string; password: string; confirm_password: string; profile: Omit<UserProfile, "updated_at"> }) => request<AuthLoginResponse>("/api/auth/register", { method: "POST", body: JSON.stringify(payload) }, false),
-  login: (payload: { role: "teacher" | "student"; account: string; password: string }) => request<AuthLoginResponse>("/api/auth/login", { method: "POST", body: JSON.stringify(payload) }, false),
+  login: (payload: { role: "admin" | "teacher" | "student"; account: string; password: string }) => request<AuthLoginResponse>("/api/auth/login", { method: "POST", body: JSON.stringify(payload) }, false),
   me: () => request<CurrentUser>("/api/auth/me"),
   logout: () => request<{ status: string }>("/api/auth/logout", { method: "POST" }),
+  changePassword: (payload: { current_password: string; new_password: string; confirm_password: string }) => request<{ status: string; message: string }>("/api/auth/change-password", { method: "POST", body: JSON.stringify(payload) }),
 
   getProfile: () => request<UserProfile>("/api/profile/me"),
   updateProfile: (payload: Omit<UserProfile, "updated_at">) => request<UserProfile>("/api/profile/me", { method: "PUT", body: JSON.stringify(payload) }),
+  uploadAvatar: async (file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    return request<{ avatar_path: string; updated_at: string }>("/api/profile/avatar", { method: "POST", body: form });
+  },
 
   getMyAppearance: () => request<AppearanceSetting>("/api/settings/me"),
-  updateMyAppearance: (payload: { mode: string; accent: string; font: string; skin: string }) => request<AppearanceSetting>("/api/settings/me", { method: "PUT", body: JSON.stringify(payload) }),
+  updateMyAppearance: (payload: { mode: string; accent: string; font: string; skin: string; language: string }) => request<AppearanceSetting>("/api/settings/me", { method: "PUT", body: JSON.stringify(payload) }),
 
   listCourses: () => request<Course[]>("/api/courses"),
   createCourse: (payload: Omit<Course, "id" | "owner_user_id" | "created_at">) => request<Course>("/api/courses", { method: "POST", body: JSON.stringify(payload) }),
@@ -337,9 +493,55 @@ export const api = {
   uploadMaterial: async (courseId: string, file: File) => {
     const form = new FormData();
     form.append("file", file);
-    return request<{ id: number; filename: string; file_type: string; size: number; message: string }>(`/api/materials/upload/${courseId}`, { method: "POST", body: form });
+    return request<MaterialItem & { message: string }>(`/api/materials/upload/${courseId}`, { method: "POST", body: form });
   },
-  listMaterials: (courseId: string) => request<{ id: number; filename: string; file_type: string; created_at: string }[]>(`/api/materials/${courseId}`),
+  listMaterials: (courseId: string) => request<MaterialItem[]>(`/api/materials/${courseId}`),
+  createClassroomShare: (payload: { course_id: string; material_ids: number[]; title: string; description: string; share_scope?: string; share_type?: string }) => request<ClassroomShare>("/api/materials/share", { method: "POST", body: JSON.stringify(payload) }),
+  listCurrentShares: (courseId?: string) => request<ClassroomShare[]>(`/api/materials/shares/current${courseId ? `?course_id=${courseId}` : ""}`),
+  listTeacherShares: (courseId?: string) => request<ClassroomShare[]>(`/api/materials/shares/teacher${courseId ? `?course_id=${courseId}` : ""}`),
+  requestCourseMaterial: (payload: { course_id: string; request_text: string }) => request<MaterialRequestItem>("/api/materials/requests", { method: "POST", body: JSON.stringify(payload) }),
+  listMaterialRequests: (courseId?: string) => request<MaterialRequestItem[]>(`/api/materials/requests/teacher${courseId ? `?course_id=${courseId}` : ""}`),
+  handleMaterialRequest: (requestId: string, status: "approved" | "rejected" | "shared") => request<MaterialRequestItem>(`/api/materials/requests/${requestId}/handle?status=${status}`, { method: "POST" }),
+  startLiveShare: (payload: { material_id: number; share_target_type?: string; share_target_id?: string }) => request<LiveShareRecord>("/api/materials/live/start", { method: "POST", body: JSON.stringify(payload) }),
+  updateLiveSharePage: (shareId: string, currentPage: number) => request<LiveShareRecord>(`/api/materials/live/${shareId}/page`, { method: "POST", body: JSON.stringify({ current_page: currentPage }) }),
+  createAnnotationStroke: (shareId: string, payload: { page_no: number; tool_type: string; color: string; line_width: number; points_data: { x: number; y: number }[]; is_temporary: boolean; expires_in_seconds?: number }) => request<AnnotationStroke>(`/api/materials/live/${shareId}/annotations`, { method: "POST", body: JSON.stringify(payload) }),
+  getCurrentLiveShare: (courseId: string) => request<LiveShareRecord | null>(`/api/materials/live/current?course_id=${courseId}`),
+  listAnnotations: (shareId: string, pageNo?: number) => request<AnnotationStroke[]>(`/api/materials/live/${shareId}/annotations${typeof pageNo === "number" ? `?page_no=${pageNo}` : ""}`),
+  endLiveShare: (shareId: string, payload: { save_mode: string; version_name?: string }) => request<LiveShareRecord>(`/api/materials/live/${shareId}/end`, { method: "POST", body: JSON.stringify(payload) }),
+  listSavedAnnotationVersions: (shareId: string) => request<SavedAnnotationVersionItem[]>(`/api/materials/live/${shareId}/versions`),
+
+  listDiscussionSpaces: () => request<DiscussionSpaceSummary[]>("/api/discussions/spaces"),
+  getDiscussionSpace: (spaceId: string) => request<DiscussionSpaceDetail>(`/api/discussions/spaces/${spaceId}`),
+  listDiscussionMessages: (spaceId: string, page = 1, pageSize = 30) => request<DiscussionSearchResult>(`/api/discussions/spaces/${spaceId}/messages?page=${page}&page_size=${pageSize}`),
+  uploadDiscussionAttachments: async (spaceId: string, files: File[]) => {
+    const form = new FormData();
+    files.forEach((file) => form.append("files", file));
+    return request<DiscussionAttachment[]>(`/api/discussions/attachments?space_id=${spaceId}`, { method: "POST", body: form });
+  },
+  sendDiscussionMessage: (payload: { space_id: string; content: string; is_anonymous: boolean; mention_ai: boolean; attachment_ids: string[] }) => request<DiscussionMessageItem[]>("/api/discussions/messages", { method: "POST", body: JSON.stringify(payload) }),
+  searchDiscussionMessages: (params: { space_id: string; keyword?: string; sender_name?: string; sender_type?: string; message_type?: string; page?: number; page_size?: number }) => {
+    const q = new URLSearchParams();
+    q.set("space_id", params.space_id);
+    if (params.keyword) q.set("keyword", params.keyword);
+    if (params.sender_name) q.set("sender_name", params.sender_name);
+    if (params.sender_type) q.set("sender_type", params.sender_type);
+    if (params.message_type) q.set("message_type", params.message_type);
+    q.set("page", String(params.page || 1));
+    q.set("page_size", String(params.page_size || 20));
+    return request<DiscussionSearchResult>(`/api/discussions/search?${q.toString()}`);
+  },
+  listMemberDiscussionMessages: (spaceId: string, userId: string, page = 1, pageSize = 20) => request<DiscussionSearchResult>(`/api/discussions/spaces/${spaceId}/members/${userId}/messages?page=${page}&page_size=${pageSize}`),
+  getDiscussionMessageContext: (messageId: string) => request<DiscussionContextResponse>(`/api/discussions/messages/${messageId}/context`),
+
+  listAdminUsers: (params?: { role?: string; keyword?: string }) => {
+    const q = new URLSearchParams();
+    if (params?.role) q.set("role", params.role);
+    if (params?.keyword) q.set("keyword", params.keyword);
+    return request<AdminUserItem[]>(`/api/admin/users${q.toString() ? `?${q.toString()}` : ""}`);
+  },
+  createAdminUser: (payload: { role: "admin" | "teacher" | "student"; account: string; password: string; display_name: string; status: string; profile: Omit<UserProfile, "updated_at"> }) => request<AdminUserItem>("/api/admin/users", { method: "POST", body: JSON.stringify(payload) }),
+  updateAdminUser: (userId: string, payload: { display_name: string; status: string; profile: Omit<UserProfile, "updated_at"> }) => request<AdminUserItem>(`/api/admin/users/${userId}`, { method: "PUT", body: JSON.stringify(payload) }),
+  deleteAdminUser: (userId: string) => request<{ status: string }>(`/api/admin/users/${userId}`, { method: "DELETE" }),
 
   getAgentConfig: (courseId: string) => request<AgentConfig>(`/api/agent-config/${courseId}`),
   updateAgentConfig: (courseId: string, payload: Omit<AgentConfig, "course_id" | "updated_at">) => request<AgentConfig>(`/api/agent-config/${courseId}`, { method: "PUT", body: JSON.stringify({ ...payload, course_id: courseId }) }),

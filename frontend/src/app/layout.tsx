@@ -2,6 +2,7 @@
 import { AppShell } from "@/components/app-shell";
 import { AuthProvider } from "@/components/auth-provider";
 import { AppearanceProvider } from "@/components/appearance-provider";
+import { LanguageProvider } from "@/components/language-provider";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -19,7 +20,9 @@ export default function RootLayout({
       <body className="app-shell min-h-full">
         <AppearanceProvider>
           <AuthProvider>
-            <AppShell>{children}</AppShell>
+            <LanguageProvider>
+              <AppShell>{children}</AppShell>
+            </LanguageProvider>
           </AuthProvider>
         </AppearanceProvider>
       </body>

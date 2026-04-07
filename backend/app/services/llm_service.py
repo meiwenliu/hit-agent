@@ -433,13 +433,27 @@ def _truncate(text: str, limit: int = 2500) -> str:
     return text if len(text) <= limit else text[:limit] + "\n[内容已截断]"
 
 
-def _build_answer_from_raw_content(raw_content: str, course_context: str, attachment_texts: List[str]) -> str:
-    sections = [raw_content.strip()]
-    if course_context:
-        sections.append("与当前课程的关联：系统已结合当前课程资料与课堂上下文生成本次回答。")
-    if attachment_texts:
-        sections.append("复习建议：本次回答还参考了你上传资料中可解析的内容，建议结合附件中的关键词继续追问。")
-    return "\n\n".join([item for item in sections if item]).strip()
+def _clean_answer_text(raw_content: str) -> str:
+    text = (raw_content or "").strip()
+    if not text:
+        return ""
+
+    data = _extract_json(text)
+    if isinstance(data, dict) and data.get("answer"):
+        text = str(data.get("answer", "")).strip()
+    else:
+        fenced = re.search(r"```(?:json|text|markdown)?\s*([\s\S]*?)```", text)
+        if fenced:
+            text = fenced.group(1).strip()
+            nested = _extract_json(text)
+            if isinstance(nested, dict) and nested.get("answer"):
+                text = str(nested.get("answer", "")).strip()
+
+    text = re.sub(r'^\s*"answer"\s*:\s*', "", text, flags=re.IGNORECASE)
+    text = text.strip().strip("{}").strip()
+    text = text.replace("\\n", "\n").replace("/n", "\n").replace("\r\n", "\n")
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text.strip()
 
 
 def ask_course_assistant(
@@ -450,6 +464,7 @@ def ask_course_assistant(
     history: List[Dict[str, str]],
     attachment_contexts: List[Dict[str, Any]],
     model_key: str = "default",
+    language: str = "zh-CN",
 ) -> Dict[str, Any]:
     attachment_texts = []
     source_labels: List[str] = []
@@ -477,12 +492,13 @@ def ask_course_assistant(
 
     system_prompt = (
         "你是课程专属 AI 助教。你的回答目标是让学生真正理解问题，而不是只让学生回去看资料。"
-        "请优先结合课程资料、可解析附件和会话上下文回答；如果资料不足，也要用高质量通俗中文补充解释。"
-        "如果能返回 JSON，请输出："
-        "{\"answer\":\"...\",\"sources\":[\"...\"],\"in_scope\":true}。"
-        "answer 中建议按“简明回答 / 详细解释 / 与当前课程的关联 / 复习建议”组织。"
+        "请优先结合课程资料、可解析附件和会话上下文回答；如果资料不足，也要补充高质量解释。"
+        "直接输出回答正文，不要输出 JSON，不要输出 Markdown 代码块，不要输出 answer、sources、in_scope 等字段名。"
+        "回答尽量自然分段，必要时可分点，但只返回正文本身。"
         "若附件中存在未解析文件，可以诚实说明边界。"
     )
+    if language == "en-US":
+        system_prompt += " The user interface is currently in English, so your entire answer must be written in natural English."
     user_text = (
         f"课程名称：{course_name or '未命名课程'}\n"
         f"课程资料摘要：\n{_truncate(course_context or '暂无课程资料')}\n\n"
@@ -512,7 +528,7 @@ def ask_course_assistant(
 
     if not call_result.get("success"):
         error_message = call_result.get("error") or FALLBACK_NOTES["provider_unavailable"]
-        answer = f"当前模型服务暂时不可用。\n\n原因说明：{error_message}\n\n建议：请稍后重试，或切换到其他已接入模型。"
+        answer = f"当前模型服务暂时不可用。\n\n{error_message}\n\n请稍后重试，或切换到其他已接入模型。"
         sources = source_labels + [f"本次尝试模型：{used_model_name}", f"模型调用状态：失败，耗时 {duration_ms} ms"]
         return {
             "answer": answer,
@@ -538,7 +554,7 @@ def ask_course_assistant(
         if call_result.get("error"):
             sources.append(call_result["error"])
         return {
-            "answer": str(data.get("answer", "")).strip(),
+            "answer": _clean_answer_text(str(data.get("answer", ""))),
             "sources": sources,
             "in_scope": bool(data.get("in_scope", True)),
             "used_model_key": used_model_key,
@@ -551,7 +567,7 @@ def ask_course_assistant(
     if call_result.get("error"):
         sources.append(call_result["error"])
     return {
-        "answer": _build_answer_from_raw_content(response, course_context, attachment_texts),
+        "answer": _clean_answer_text(response),
         "sources": sources,
         "in_scope": True,
         "used_model_key": used_model_key,

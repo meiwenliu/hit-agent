@@ -11,6 +11,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from ..database import (
+    DBAppearanceSetting,
     DBCourse,
     DBLessonPack,
     DBMaterial,
@@ -258,6 +259,7 @@ def ask_question(body: StudentQuestionCreate, current_user: dict = Depends(requi
     teacher_reply_status = "not_requested"
 
     if body.answer_target_type in {"ai", "both"}:
+        appearance = db.query(DBAppearanceSetting).filter(DBAppearanceSetting.user_role == current_user["role"], DBAppearanceSetting.user_id == current_user["id"]).first()
         ai_payload = ask_course_assistant(
             question=body.question or "请结合上传附件帮我理解这份资料。",
             course_name=course_name,
@@ -265,6 +267,7 @@ def ask_question(body: StudentQuestionCreate, current_user: dict = Depends(requi
             history=history,
             attachment_contexts=[{"file_name": item.file_name, "file_type": item.file_type, "file_path": item.file_path, "parse_summary": item.parse_summary} for item in attachments],
             model_key=body.selected_model or session.selected_model or "default",
+            language=(appearance.language if appearance and appearance.language else "zh-CN"),
         )
         ai_answer_content = ai_payload["answer"]
         ai_answer_sources = ai_payload["sources"]

@@ -43,7 +43,65 @@
 - `accent`
 - `font`
 - `skin`
+- `language`
 - `updated_at`
+
+## 课程与讨论空间
+### `courses`
+- `class_name`
+
+### `course_classes`
+- `id`
+- `course_id`
+- `class_name`
+- `discussion_space_id`
+
+### `discussion_spaces`
+- `id`
+- `course_id`
+- `class_name`
+- `space_name`
+- `ai_assistant_enabled`
+- `created_at`
+
+### `discussion_space_members`
+- `space_id`
+- `user_id`
+- `role_in_space`
+- `joined_at`
+
+### `discussion_messages`
+- `space_id`
+- `sender_user_id`
+- `sender_type`
+- `is_anonymous`
+- `message_type`
+- `content`
+- `reply_to_message_id`
+- `ai_sources_json`
+- `created_at`
+
+索引：
+- `space_id`
+- `sender_user_id`
+- `created_at`
+
+### `discussion_message_attachments`
+- `message_id`
+- `file_name`
+- `file_type`
+- `file_size`
+- `file_path`
+- `parse_status`
+- `parse_summary`
+
+### `ai_discussion_context_logs`
+- `space_id`
+- `trigger_message_id`
+- `used_context_range`
+- `model_name`
+- `response_summary`
+- `created_at`
 
 ## 课程问答
 ### `chat_sessions`
@@ -125,3 +183,53 @@
 ## 材料更新
 ### `material_update_jobs`
 保存教师发起的材料更新生成结果。
+
+## 教学资料共享与实时批注
+### `materials`
+- `share_scope`
+- `allow_student_view`
+- `allow_classroom_share`
+- `allow_request`
+- `class_name`
+- `has_saved_annotation`
+
+### `material_share_records`
+- `material_id`
+- `course_id`
+- `shared_by_teacher_id`
+- `share_target_type`
+- `share_target_id`
+- `is_active`
+- `current_page`
+- `started_at`
+- `ended_at`
+
+### `material_requests`
+- `material_id`
+- `course_id`
+- `class_name`
+- `student_id`
+- `request_text`
+- `status`
+- `handled_at`
+- `handled_by`
+
+### `material_annotations`
+- `material_id`
+- `share_record_id`
+- `page_no`
+- `tool_type`
+- `color`
+- `line_width`
+- `points_data`
+- `is_temporary`
+- `expires_at`
+- `created_by`
+
+### `saved_annotation_versions`
+- `material_id`
+- `share_record_id`
+- `saved_by`
+- `version_name`
+- `save_mode`
+- `annotation_ids_json`

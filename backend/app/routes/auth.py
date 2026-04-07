@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from ..database import DBUser, DBUserProfile, get_db
-from ..models.schemas import AuthLoginRequest, AuthLoginResponse, AuthRegisterRequest, UserProfile, UserSummary
+from ..models.schemas import AuthLoginRequest, AuthLoginResponse, AuthRegisterRequest, PasswordChangeRequest, UserProfile, UserSummary
 from ..security import build_user_payload, create_session_token, delete_session_token, get_current_user, hash_password, verify_password
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -16,6 +16,8 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 @router.post("/register", response_model=AuthLoginResponse)
 def register(body: AuthRegisterRequest, db: Session = Depends(get_db)):
+    if body.role == "admin":
+        raise HTTPException(status_code=403, detail="管理员账号仅能由系统管理员创建")
     if body.password != body.confirm_password:
         raise HTTPException(status_code=400, detail="两次输入的密码不一致")
     if db.query(DBUser).filter(DBUser.account == body.account).first():
@@ -165,3 +167,17 @@ def me(current_user: dict = Depends(get_current_user)):
 def logout(current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
     delete_session_token(current_user["token"], db)
     return {"status": "ok"}
+
+
+@router.post("/change-password")
+def change_password(body: PasswordChangeRequest, current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    if body.new_password != body.confirm_password:
+        raise HTTPException(status_code=400, detail="两次输入的新密码不一致")
+    user = db.query(DBUser).filter(DBUser.id == current_user["id"]).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="用户不存在")
+    if not verify_password(body.current_password, user.password_hash):
+        raise HTTPException(status_code=400, detail="当前密码不正确")
+    user.password_hash = hash_password(body.new_password)
+    db.commit()
+    return {"status": "ok", "message": "密码已更新，请使用新密码重新登录。"}

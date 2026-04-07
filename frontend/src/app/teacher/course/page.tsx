@@ -11,6 +11,7 @@ export default function CourseCreatePage() {
   const [form, setForm] = useState({
     name: "",
     audience: "",
+    class_name: "",
     student_level: "",
     chapter: "",
     objectives: "",
@@ -54,6 +55,12 @@ export default function CourseCreatePage() {
             <Field label="授课对象">
               <input type="text" value={form.audience} onChange={(e) => setForm({ ...form, audience: e.target.value })} className="w-full rounded-[20px] border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-amber-400 focus:ring-4 focus:ring-amber-100" placeholder="例如：大三本科生" />
             </Field>
+            <Field label="授课班级">
+              <input type="text" value={form.class_name} onChange={(e) => setForm({ ...form, class_name: e.target.value })} className="w-full rounded-[20px] border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-amber-400 focus:ring-4 focus:ring-amber-100" placeholder="例如：计科2301班" />
+            </Field>
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-2">
             <Field label="学生水平">
               <input type="text" value={form.student_level} onChange={(e) => setForm({ ...form, student_level: e.target.value })} className="w-full rounded-[20px] border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-amber-400 focus:ring-4 focus:ring-amber-100" placeholder="例如：中等偏上" />
             </Field>

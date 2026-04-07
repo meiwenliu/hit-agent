@@ -1,7 +1,8 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { AvatarBadge } from "@/components/avatar-badge";
 import { useAuth } from "@/components/auth-provider";
 import { api, type UserProfile } from "@/lib/api";
 
@@ -28,6 +29,13 @@ const EMPTY_PROFILE: Omit<UserProfile, "updated_at"> = {
   linked_classes: [],
 };
 
+const PRESET_AVATARS = [
+  { label: "默认蓝", value: "" },
+  { label: "晨曦橙", value: "preset:sunrise" },
+  { label: "森林绿", value: "preset:forest" },
+  { label: "星云紫", value: "preset:nebula" },
+];
+
 function listToText(items: string[]) {
   return items.join("，");
 }
@@ -41,6 +49,7 @@ export default function ProfilePage() {
   const { user, loading, updateUser } = useAuth();
   const [form, setForm] = useState<Omit<UserProfile, "updated_at">>(EMPTY_PROFILE);
   const [saving, setSaving] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [message, setMessage] = useState("");
 
   useEffect(() => {
@@ -134,13 +143,30 @@ export default function ProfilePage() {
     );
   };
 
+  const handleAvatarUpload = async (file: File | null) => {
+    if (!file) return;
+    setUploadingAvatar(true);
+    setMessage("");
+    try {
+      const result = await api.uploadAvatar(file);
+      const nextProfile = { ...form, avatar_path: result.avatar_path };
+      setForm(nextProfile);
+      updateUser({ ...user, profile: { ...user.profile, avatar_path: result.avatar_path }, display_name: nextProfile.real_name || user.account });
+      setMessage("头像已更新。你也可以继续选择默认头像样式。");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "头像上传失败");
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
   const handleSave = async () => {
     setSaving(true);
     setMessage("");
     try {
       const profile = await api.updateProfile(form);
       updateUser({ ...user, display_name: profile.real_name || user.account, profile });
-      setMessage("个人资料已保存，后续可以继续补充完善。")
+      setMessage("个人资料已保存，头像、简介和角色信息都会同步到右上角菜单。");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "保存失败，请稍后重试");
     } finally {
@@ -164,6 +190,33 @@ export default function ProfilePage() {
           </div>
         </div>
 
+        <section className="mt-6 section-card rounded-[28px] p-6">
+          <h3 className="text-xl font-bold text-slate-900">头像与公开展示</h3>
+          <div className="mt-5 flex flex-wrap items-start gap-6">
+            <AvatarBadge name={form.real_name || user.display_name || user.account} avatarPath={form.avatar_path} size="lg" />
+            <div className="flex-1 space-y-4">
+              <div>
+                <p className="text-sm font-semibold text-slate-900">选择默认头像风格</p>
+                <div className="mt-3 flex flex-wrap gap-3">
+                  {PRESET_AVATARS.map((item) => (
+                    <button key={item.label} onClick={() => setValue("avatar_path", item.value)} className={`rounded-full px-4 py-2 text-sm font-semibold transition ${form.avatar_path === item.value ? "ui-pill-active" : "ui-pill"}`}>
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-slate-900">上传自定义头像</p>
+                <label className="mt-3 inline-flex cursor-pointer rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white">
+                  {uploadingAvatar ? "上传中..." : "上传图片"}
+                  <input type="file" accept=".jpg,.jpeg,.png,.webp" className="hidden" onChange={(e) => void handleAvatarUpload(e.target.files?.[0] || null)} />
+                </label>
+                <p className="mt-2 text-xs leading-6 text-slate-500">支持 jpg、png、webp。上传后右上角会立即显示新头像。</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <div className="mt-6 space-y-6">
           {grouped.map((group) => (
             <section key={group.title} className="section-card rounded-[28px] p-6">
@@ -176,7 +229,7 @@ export default function ProfilePage() {
         </div>
 
         <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
-          <p className={`text-sm ${message.includes("已保存") ? "text-emerald-700" : "text-slate-500"}`}>{message || "建议完善资料，便于教师进行班级管理与教学统计。"}</p>
+          <p className={`text-sm ${message.includes("已") ? "text-emerald-700" : "text-slate-500"}`}>{message || "建议完善资料，便于教师进行班级管理与教学统计。"}</p>
           <button onClick={() => void handleSave()} disabled={saving} className="rounded-full bg-[var(--accent)] px-6 py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50">{saving ? "保存中..." : "保存个人资料"}</button>
         </div>
       </section>

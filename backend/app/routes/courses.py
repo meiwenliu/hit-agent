@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from ..database import DBCourse, get_db
 from ..models.schemas import Course, CourseCreate
 from ..security import get_current_user, require_roles
+from ..services.discussion_service import ensure_discussion_space_for_course_class
 
 router = APIRouter(prefix="/api/courses", tags=["courses"])
 
@@ -18,6 +19,7 @@ def _db_to_course(row: DBCourse) -> Course:
         id=row.id,
         name=row.name,
         audience=row.audience,
+        class_name=row.class_name or "",
         student_level=row.student_level,
         chapter=row.chapter,
         objectives=row.objectives,
@@ -34,6 +36,7 @@ def create_course(body: CourseCreate, current_user: dict = Depends(require_roles
         id=f"course-{uuid4().hex[:8]}",
         name=body.name,
         audience=body.audience,
+        class_name=body.class_name or body.audience,
         student_level=body.student_level,
         chapter=body.chapter,
         objectives=body.objectives,
@@ -43,6 +46,10 @@ def create_course(body: CourseCreate, current_user: dict = Depends(require_roles
         created_at=datetime.now().isoformat(),
     )
     db.add(row)
+    db.flush()
+    target_class = body.class_name or body.audience
+    if target_class:
+        ensure_discussion_space_for_course_class(db, course=row, class_name=target_class, teacher_user_id=current_user["id"])
     db.commit()
     db.refresh(row)
     return _db_to_course(row)

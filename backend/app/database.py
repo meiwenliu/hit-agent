@@ -6,7 +6,7 @@ import os
 from datetime import datetime
 from typing import Iterable
 
-from sqlalchemy import Column, Integer, Text, create_engine, inspect, text
+from sqlalchemy import Column, Index, Integer, Text, create_engine, inspect, text
 from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy.sql.sqltypes import String
 
@@ -18,8 +18,9 @@ ASSIGNMENT_UPLOAD_DIR = os.path.join(UPLOAD_DIR, "assignments")
 PROFILE_UPLOAD_DIR = os.path.join(UPLOAD_DIR, "profiles")
 MATERIAL_UPDATE_UPLOAD_DIR = os.path.join(UPLOAD_DIR, "material_updates")
 MATERIAL_UPLOAD_DIR = os.path.join(UPLOAD_DIR, "materials")
+DISCUSSION_UPLOAD_DIR = os.path.join(UPLOAD_DIR, "discussions")
 
-for path in [DATA_DIR, UPLOAD_DIR, QUESTION_UPLOAD_DIR, ASSIGNMENT_UPLOAD_DIR, PROFILE_UPLOAD_DIR, MATERIAL_UPDATE_UPLOAD_DIR, MATERIAL_UPLOAD_DIR]:
+for path in [DATA_DIR, UPLOAD_DIR, QUESTION_UPLOAD_DIR, ASSIGNMENT_UPLOAD_DIR, PROFILE_UPLOAD_DIR, MATERIAL_UPDATE_UPLOAD_DIR, MATERIAL_UPLOAD_DIR, DISCUSSION_UPLOAD_DIR]:
     os.makedirs(path, exist_ok=True)
 
 DB_PATH = os.path.join(DATA_DIR, "app.db")
@@ -36,6 +37,7 @@ class DBCourse(Base):
     id = Column(String, primary_key=True)
     name = Column(String, nullable=False)
     audience = Column(String, default="")
+    class_name = Column(String, default="")
     student_level = Column(String, default="")
     chapter = Column(String, default="")
     objectives = Column(Text, default="")
@@ -137,7 +139,86 @@ class DBAppearanceSetting(Base):
     accent = Column(String, default="blue")
     font = Column(String, default="default")
     skin = Column(String, default="clean")
+    language = Column(String, default="zh-CN")
     updated_at = Column(String)
+
+
+class DBCourseClass(Base):
+    __tablename__ = "course_classes"
+
+    id = Column(String, primary_key=True)
+    course_id = Column(String, nullable=False)
+    class_name = Column(String, nullable=False)
+    discussion_space_id = Column(String, default="")
+    created_at = Column(String)
+
+
+class DBDiscussionSpace(Base):
+    __tablename__ = "discussion_spaces"
+
+    id = Column(String, primary_key=True)
+    course_id = Column(String, nullable=False)
+    class_name = Column(String, default="")
+    space_name = Column(String, nullable=False)
+    ai_assistant_enabled = Column(Integer, default=1)
+    created_at = Column(String)
+
+
+class DBDiscussionSpaceMember(Base):
+    __tablename__ = "discussion_space_members"
+
+    id = Column(String, primary_key=True)
+    space_id = Column(String, nullable=False)
+    user_id = Column(String, default="")
+    role_in_space = Column(String, default="student")
+    joined_at = Column(String)
+
+
+class DBDiscussionMessage(Base):
+    __tablename__ = "discussion_messages"
+    __table_args__ = (
+        Index("idx_discussion_messages_space_id", "space_id"),
+        Index("idx_discussion_messages_sender_user_id", "sender_user_id"),
+        Index("idx_discussion_messages_created_at", "created_at"),
+    )
+
+    id = Column(String, primary_key=True)
+    space_id = Column(String, nullable=False)
+    sender_user_id = Column(String, default="")
+    sender_type = Column(String, default="student")
+    is_anonymous = Column(Integer, default=0)
+    message_type = Column(String, default="text")
+    content = Column(Text, default="")
+    reply_to_message_id = Column(String, default="")
+    ai_sources_json = Column(Text, default="[]")
+    created_at = Column(String)
+
+
+class DBDiscussionMessageAttachment(Base):
+    __tablename__ = "discussion_message_attachments"
+
+    id = Column(String, primary_key=True)
+    message_id = Column(String, default="")
+    uploader_user_id = Column(String, default="")
+    file_name = Column(String, nullable=False)
+    file_type = Column(String, default="")
+    file_size = Column(Integer, default=0)
+    file_path = Column(String, default="")
+    parse_status = Column(String, default="pending")
+    parse_summary = Column(Text, default="")
+    created_at = Column(String)
+
+
+class DBAIDiscussionContextLog(Base):
+    __tablename__ = "ai_discussion_context_logs"
+
+    id = Column(String, primary_key=True)
+    space_id = Column(String, nullable=False)
+    trigger_message_id = Column(String, nullable=False)
+    used_context_range = Column(Text, default="")
+    model_name = Column(String, default="")
+    response_summary = Column(Text, default="")
+    created_at = Column(String)
 
 
 class DBAgentConfig(Base):
@@ -356,6 +437,90 @@ class DBMaterial(Base):
     content = Column(Text, default="")
     file_type = Column(String, default="")
     file_path = Column(String, default="")
+    uploader_user_id = Column(String, default="")
+    file_size = Column(Integer, default=0)
+    share_scope = Column(String, default="private")
+    allow_student_view = Column(Integer, default=1)
+    allow_classroom_share = Column(Integer, default=1)
+    allow_request = Column(Integer, default=1)
+    class_name = Column(String, default="")
+    has_saved_annotation = Column(Integer, default=0)
+    created_at = Column(String)
+
+
+class DBClassroomShare(Base):
+    __tablename__ = "classroom_shares"
+
+    id = Column(String, primary_key=True)
+    course_id = Column(String, nullable=False)
+    teacher_id = Column(String, nullable=False)
+    title = Column(String, default="课堂资料共享")
+    description = Column(Text, default="")
+    material_ids_json = Column(Text, default="[]")
+    share_scope = Column(String, default="classroom")
+    share_type = Column(String, default="material")
+    status = Column(String, default="active")
+    created_at = Column(String)
+
+
+class DBMaterialShareRecord(Base):
+    __tablename__ = "material_share_records"
+
+    id = Column(String, primary_key=True)
+    material_id = Column(Integer, nullable=False)
+    course_id = Column(String, default="")
+    shared_by_teacher_id = Column(String, nullable=False)
+    share_target_type = Column(String, default="course_class")
+    share_target_id = Column(String, default="")
+    is_active = Column(Integer, default=1)
+    current_page = Column(Integer, default=1)
+    started_at = Column(String)
+    ended_at = Column(String, default="")
+
+
+class DBMaterialRequest(Base):
+    __tablename__ = "material_requests"
+
+    id = Column(String, primary_key=True)
+    material_id = Column(Integer, default=0)
+    course_id = Column(String, nullable=False)
+    class_name = Column(String, default="")
+    student_id = Column(String, nullable=False)
+    request_text = Column(Text, default="")
+    anonymous = Column(Integer, default=0)
+    status = Column(String, default="pending")
+    created_at = Column(String)
+    handled_at = Column(String, default="")
+    handled_by = Column(String, default="")
+
+
+class DBMaterialAnnotation(Base):
+    __tablename__ = "material_annotations"
+
+    id = Column(String, primary_key=True)
+    material_id = Column(Integer, nullable=False)
+    share_record_id = Column(String, nullable=False)
+    page_no = Column(Integer, default=1)
+    tool_type = Column(String, default="pen")
+    color = Column(String, default="#ef4444")
+    line_width = Column(Integer, default=4)
+    points_data = Column(Text, default="[]")
+    is_temporary = Column(Integer, default=0)
+    expires_at = Column(String, default="")
+    created_by = Column(String, default="")
+    created_at = Column(String)
+
+
+class DBSavedAnnotationVersion(Base):
+    __tablename__ = "saved_annotation_versions"
+
+    id = Column(String, primary_key=True)
+    material_id = Column(Integer, nullable=False)
+    share_record_id = Column(String, nullable=False)
+    saved_by = Column(String, nullable=False)
+    version_name = Column(String, default="")
+    save_mode = Column(String, default="save")
+    annotation_ids_json = Column(Text, default="[]")
     created_at = Column(String)
 
 
@@ -399,9 +564,32 @@ def init_db() -> None:
             ("is_anonymous", "INTEGER DEFAULT 0"),
         ],
     )
-    _ensure_columns("courses", [("owner_user_id", "TEXT DEFAULT ''")])
-    _ensure_columns("materials", [("file_path", "TEXT DEFAULT ''")])
+    _ensure_columns("courses", [("owner_user_id", "TEXT DEFAULT ''"), ("class_name", "TEXT DEFAULT ''")])
+    _ensure_columns(
+        "materials",
+        [
+            ("file_path", "TEXT DEFAULT ''"),
+            ("uploader_user_id", "TEXT DEFAULT ''"),
+            ("file_size", "INTEGER DEFAULT 0"),
+            ("share_scope", "TEXT DEFAULT 'private'"),
+            ("allow_student_view", "INTEGER DEFAULT 1"),
+            ("allow_classroom_share", "INTEGER DEFAULT 1"),
+            ("allow_request", "INTEGER DEFAULT 1"),
+            ("class_name", "TEXT DEFAULT ''"),
+            ("has_saved_annotation", "INTEGER DEFAULT 0"),
+        ],
+    )
     _ensure_columns("survey_instances", [("trigger_mode", "TEXT DEFAULT 'manual'")])
+    _ensure_columns("appearance_settings", [("language", "TEXT DEFAULT 'zh-CN'")])
+    _ensure_columns(
+        "material_requests",
+        [
+            ("material_id", "INTEGER DEFAULT 0"),
+            ("class_name", "TEXT DEFAULT ''"),
+            ("handled_at", "TEXT DEFAULT ''"),
+            ("handled_by", "TEXT DEFAULT ''"),
+        ],
+    )
     _ensure_columns(
         "material_update_jobs",
         [
@@ -480,6 +668,18 @@ def init_db() -> None:
                 created_at=datetime.now().isoformat(),
             )
             db.add(student_user)
+        admin_user = db.query(DBUser).filter(DBUser.account == "admin_demo").first()
+        if not admin_user:
+            admin_user = DBUser(
+                id="user-admin-demo",
+                role="admin",
+                account="admin_demo",
+                password_hash=hash_password("Admin123!"),
+                display_name="系统管理员",
+                status="active",
+                created_at=datetime.now().isoformat(),
+            )
+            db.add(admin_user)
         db.flush()
 
         if not db.query(DBUserProfile).filter(DBUserProfile.user_id == "user-teacher-demo").first():
@@ -516,10 +716,74 @@ def init_db() -> None:
                 created_at=datetime.now().isoformat(),
                 updated_at=datetime.now().isoformat(),
             ))
+        if not db.query(DBUserProfile).filter(DBUserProfile.user_id == "user-admin-demo").first():
+            db.add(DBUserProfile(
+                user_id="user-admin-demo",
+                real_name="系统管理员",
+                college="平台运维中心",
+                email="admin_demo@example.com",
+                phone="13800000003",
+                bio="负责全站用户、课程与讨论空间管理。",
+                created_at=datetime.now().isoformat(),
+                updated_at=datetime.now().isoformat(),
+            ))
 
         demo_course = db.query(DBCourse).filter(DBCourse.id == "demo-course-001").first()
         if demo_course and not demo_course.owner_user_id:
             demo_course.owner_user_id = "user-teacher-demo"
+        if demo_course and not demo_course.class_name:
+            demo_course.class_name = "计科2301班"
+
+        if demo_course and not db.query(DBCourseClass).filter(DBCourseClass.course_id == demo_course.id, DBCourseClass.class_name == "计科2301班").first():
+            space_id = "space-demo-001"
+            if not db.query(DBDiscussionSpace).filter(DBDiscussionSpace.id == space_id).first():
+                db.add(DBDiscussionSpace(
+                    id=space_id,
+                    course_id=demo_course.id,
+                    class_name="计科2301班",
+                    space_name="计算机网络-计科2301班讨论空间",
+                    ai_assistant_enabled=1,
+                    created_at=datetime.now().isoformat(),
+                ))
+            db.add(DBCourseClass(
+                id="course-class-demo-001",
+                course_id=demo_course.id,
+                class_name="计科2301班",
+                discussion_space_id=space_id,
+                created_at=datetime.now().isoformat(),
+            ))
+            db.flush()
+            existing_members = db.query(DBDiscussionSpaceMember).filter(DBDiscussionSpaceMember.space_id == space_id).count()
+            if existing_members == 0:
+                db.add_all([
+                    DBDiscussionSpaceMember(id=f"mem-{uuid4().hex[:8]}", space_id=space_id, user_id="user-teacher-demo", role_in_space="teacher", joined_at=datetime.now().isoformat()),
+                    DBDiscussionSpaceMember(id=f"mem-{uuid4().hex[:8]}", space_id=space_id, user_id="user-student-demo", role_in_space="student", joined_at=datetime.now().isoformat()),
+                    DBDiscussionSpaceMember(id=f"mem-{uuid4().hex[:8]}", space_id=space_id, user_id="ai-course-assistant", role_in_space="ai", joined_at=datetime.now().isoformat()),
+                ])
+            if db.query(DBDiscussionMessage).filter(DBDiscussionMessage.space_id == space_id).count() == 0:
+                db.add_all([
+                    DBDiscussionMessage(
+                        id=f"msg-{uuid4().hex[:8]}",
+                        space_id=space_id,
+                        sender_user_id="user-teacher-demo",
+                        sender_type="teacher",
+                        is_anonymous=0,
+                        message_type="text",
+                        content="欢迎进入课程讨论空间。大家可以在这里实名或匿名发言，也可以 @AI 助教参与讨论。",
+                        created_at=datetime.now().isoformat(),
+                    ),
+                    DBDiscussionMessage(
+                        id=f"msg-{uuid4().hex[:8]}",
+                        space_id=space_id,
+                        sender_user_id="ai-course-assistant",
+                        sender_type="ai",
+                        is_anonymous=0,
+                        message_type="text",
+                        content="我是课程专属 AI 助教。被 @ 时我会结合最近讨论、课程资料和附件内容参与回答。",
+                        ai_sources_json=json.dumps(["课程资料", "最近讨论上下文", "大模型补充解释"], ensure_ascii=False),
+                        created_at=datetime.now().isoformat(),
+                    ),
+                ])
 
         if db.query(DBSurveyTemplate).count() == 0:
             default_questions = [

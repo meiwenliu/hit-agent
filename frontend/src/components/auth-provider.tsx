@@ -12,7 +12,7 @@ type RegisterPayload = {
 };
 
 type LoginPayload = {
-  role: "teacher" | "student";
+  role: "admin" | "teacher" | "student";
   account: string;
   password: string;
 };
