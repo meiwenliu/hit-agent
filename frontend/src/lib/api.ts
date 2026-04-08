@@ -1,7 +1,18 @@
-﻿const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:8000";
+function getDefaultApiBase() {
+  const protocol = process.env.NEXT_PUBLIC_API_PROTOCOL || "http";
+  const port = process.env.NEXT_PUBLIC_API_PORT || "8000";
+
+  if (typeof window !== "undefined") {
+    return `${window.location.protocol}//${window.location.hostname}:${port}`;
+  }
+
+  return `${protocol}://127.0.0.1:${port}`;
+}
+
+const RESOLVED_API_BASE = process.env.NEXT_PUBLIC_API_BASE || getDefaultApiBase();
 const TOKEN_KEY = "hit-agent-token";
 
-export { API_BASE, TOKEN_KEY };
+export { RESOLVED_API_BASE as API_BASE, TOKEN_KEY };
 
 function getToken() {
   if (typeof window === "undefined") return "";
@@ -17,7 +28,7 @@ async function request<T>(path: string, options?: RequestInit, auth = true): Pro
     const token = getToken();
     if (token) headers.set("Authorization", `Bearer ${token}`);
   }
-  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+  const res = await fetch(`${RESOLVED_API_BASE}${path}`, { ...options, headers });
   if (!res.ok) {
     const text = await res.text();
     throw new Error(text || `接口请求失败：${res.status}`);

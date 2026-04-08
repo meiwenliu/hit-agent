@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { RichAnswer } from "@/components/rich-answer";
 import { useAuth } from "@/components/auth-provider";
 import { useLanguage } from "@/components/language-provider";
-import { api, type QuestionRecord, type TeacherNotification } from "@/lib/api";
+import { API_BASE, api, type QuestionRecord, type TeacherNotification } from "@/lib/api";
 import { pick } from "@/lib/i18n";
 
 export default function TeacherQuestionsPage() {
@@ -127,7 +127,7 @@ export default function TeacherQuestionsPage() {
                 <h3 className="text-lg font-bold text-slate-900">{pick(language, "学生上传附件", "Student Attachments")}</h3>
                 <div className="mt-3 flex flex-wrap gap-3">
                   {activeQuestion.attachment_items.map((attachment) => (
-                    <a key={attachment.id} href={`${process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000"}${attachment.download_url}`} target="_blank" className="rounded-full border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50">
+                    <a key={attachment.id} href={`${API_BASE}${attachment.download_url}`} target="_blank" className="rounded-full border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50">
                       {attachment.file_name}
                     </a>
                   ))}

@@ -12,4 +12,4 @@ if (-not (Test-Path 'node_modules\next')) {
   throw 'Frontend dependencies are missing. Run install-frontend.ps1 first.'
 }
 
-& (Join-Path $nodeDir 'npm.cmd') run dev
+& (Join-Path $nodeDir 'npm.cmd') run dev -- --hostname 0.0.0.0

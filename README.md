@@ -119,11 +119,11 @@
 ### 1. 后端
 在项目根目录执行：
 ```powershell
-.\backend\.venv\Scripts\python.exe -m uvicorn app.main:app --app-dir .\backend --host 127.0.0.1 --port 8000
+.\backend\.venv\Scripts\python.exe -m uvicorn app.main:app --app-dir .\backend --host 0.0.0.0 --port 8000
 ```
 
 启动后可先打开：`http://127.0.0.1:8000/api/health`
-如果能看到 `{"status":"ok","version":"0.7.0"}`，说明后端正常。
+如果能看到 `{"status":"ok","version":"0.8.0"}`，说明后端正常。
 
 ### 1.1 智谱 GLM-5.1 推荐配置
 如果你优先使用智谱官方兼容接口，建议直接设置：
@@ -140,11 +140,18 @@ $env:LLM_API_KEY = "你的智谱 API Key"
 ```powershell
 cd .\frontend
 $env:Path = "E:\ai_app\hit-agent-master\node-v24.14.1-win-x64;" + $env:Path
-$env:NEXT_PUBLIC_API_BASE = "http://127.0.0.1:8000"
 npm.cmd run dev
 ```
 
-默认访问地址：`http://127.0.0.1:3000`
+本机访问地址：`http://127.0.0.1:3000`
+
+局域网其他设备访问时，请打开：
+`http://你的局域网IP:3000`
+
+说明：
+- 前端默认会把接口请求发送到“当前访问这台机器的 8000 端口”
+- 后端已改为监听 `0.0.0.0:8000`
+- 如果你的 Windows 防火墙拦截了 3000 或 8000 端口，需要允许局域网访问
 
 ### 3. 演示账号
 初始化数据库时会自动写入两个演示账号：

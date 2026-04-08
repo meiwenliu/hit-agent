@@ -1,4 +1,6 @@
-﻿"""FastAPI application entrypoint."""
+"""FastAPI application entrypoint."""
+
+import os
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -12,9 +14,16 @@ app = FastAPI(
     description="面向前沿学科教学场景的教师教学全流程智能伙伴平台。",
 )
 
+frontend_port = os.getenv("FRONTEND_PORT", "3000")
+frontend_origin_regex = os.getenv(
+    "FRONTEND_ORIGIN_REGEX",
+    rf"^https?://(localhost|127\.0\.0\.1|10(?:\.\d{{1,3}}){{3}}|192\.168(?:\.\d{{1,3}}){{2}}|172\.(?:1[6-9]|2\d|3[0-1])(?:\.\d{{1,3}}){{2}}|[A-Za-z0-9.-]+):{frontend_port}$",
+)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origin_regex=frontend_origin_regex,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

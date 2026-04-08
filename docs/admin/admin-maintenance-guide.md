@@ -2,7 +2,7 @@
 
 ## 1. 后端启动
 ```powershell
-.\backend\.venv\Scripts\python.exe -m uvicorn app.main:app --app-dir .\backend --host 127.0.0.1 --port 8000
+.\backend\.venv\Scripts\python.exe -m uvicorn app.main:app --app-dir .\backend --host 0.0.0.0 --port 8000
 ```
 
 ## 2. 前端启动
@@ -11,6 +11,11 @@ cd .\frontend
 npm install
 npm run dev
 ```
+
+局域网访问说明：
+- 本机仍可使用 `http://127.0.0.1:3000`
+- 其他设备请使用部署机器的局域网 IP，例如 `http://192.168.1.23:3000`
+- 如无法访问，请检查 Windows 防火墙是否放行 `3000` 和 `8000` 端口
 
 ## 3. 模型配置
 ### 默认模型
